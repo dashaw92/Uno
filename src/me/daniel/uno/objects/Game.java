@@ -11,7 +11,7 @@ public class Game {
 	private int turn = 0;
 	private int turncount = 0;
 	private int direction = 1;
-	private int actions_done = 0; //counts the amount of turns since an action card was played
+	private boolean action = false; //counts the amount of turns since an action card was played
 	private List<Player> players;
 	private boolean playing = false;
 	
@@ -41,54 +41,45 @@ public class Game {
 	
 	public void turn() {
 		turncount += 1;
-		if(turn <= 0) turn = players.size() - 1;
+		if(turn <= 0) turn = players.size();
 		Player current = players.get(turn % players.size());
 		Server.broadcast(String.format("\n\rTurn %d - It's %s's turn.\n\r", turncount, current.getNick()));
-		if(discard.getCardCount() > 0) { 
+		if(discard.getCardCount() > 0 && !action) { 
 			switch(getTopDiscarded().type) {
 				case SKIP:
-					if(actions_done < 1) {
-						Server.broadcast(String.format("%s was skipped this turn.\n\r", current.getNick()));
-						actions_done += 1;
-						turn += direction;
-						if(turn < 0) {
-							turn = players.size();
-						}
-						return;
+					Server.broadcast(String.format("%s was skipped this turn.\n\r", current.getNick()));
+					action = true;
+					turn += direction;
+					if(turn < 0) {
+						turn = players.size();
 					}
-					break;
+					return;
 				case DRAW_FOUR:
-					if(actions_done < 1) {
-						Server.broadcast(String.format("%s had to draw four.\n\r", current.getNick()));
-						actions_done += 1;
-						for(int i = 0; i < 4; i++) {
-							Card c = drawing.draw();
-							current.sendString(String.format("You drew %s\n\r", c));
-							current.giveCard(c);
-						}
-						turn += direction;
-						if(turn < 0) {
-							turn = players.size();
-						}
-						return;
+					Server.broadcast(String.format("%s had to draw four.\n\r", current.getNick()));
+					action = true;
+					for(int i = 0; i < 4; i++) {
+						Card c = drawing.draw();
+						current.sendString(String.format("You drew %s\n\r", c));
+						current.giveCard(c);
 					}
-					break;
+					turn += direction;
+					if(turn < 0) {
+						turn = players.size();
+					}
+					return;
 				case DRAW_TWO:
-					if(actions_done < 1) {
-						Server.broadcast(String.format("%s had to draw two.\n\r", current.getNick()));
-						actions_done += 1;
-						for(int i = 0; i < 2; i++) {
-							Card c = drawing.draw();
-							current.sendString(String.format("You drew %s\n\r", c));
-							current.giveCard(c);
-						}
-						turn += direction;
-						if(turn < 0) {
-							turn = players.size();
-						}
-						return;
+					Server.broadcast(String.format("%s had to draw two.\n\r", current.getNick()));
+					action = true;
+					for(int i = 0; i < 2; i++) {
+						Card c = drawing.draw();
+						current.sendString(String.format("You drew %s\n\r", c));
+						current.giveCard(c);
 					}
-					break;
+					turn += direction;
+					if(turn < 0) {
+						turn = players.size();
+					}
+					return;
 				default:
 					break;
 					
@@ -99,8 +90,8 @@ public class Game {
 		Card last = getTopDiscarded();
 		current.sendString(String.format("Last card: %s\n\r", last == null? "None" : last));
 		while(in_turn) {
-			GameAction action = current.requestInput();
-			switch(action.type) {
+			GameAction gaction = current.requestInput();
+			switch(gaction.type) {
 				case SKIP:
 					boolean can_move = false;
 					if(!drew) {
@@ -140,7 +131,7 @@ public class Game {
 					drew = true;
 					continue;
 				case PLAY:
-					Card toPlay = action.card;
+					Card toPlay = gaction.card;
 					if(!isLegalMove(toPlay)) {
 						current.giveCard(toPlay);
 						current.sendString("That is not a legal card to play.\n\r");
@@ -148,7 +139,7 @@ public class Game {
 					}
 					discard.addCard(toPlay);
 					Server.broadcast(String.format("%s played %S %S.\n\r", current.getNick(), toPlay.suit, toPlay.type));
-					actions_done = 0;
+					action = false;
 					switch(toPlay.type) {
 						case REVERSE:
 							direction = direction == 1? -1 : 1;
@@ -165,7 +156,7 @@ public class Game {
 		
 		turn += direction;
 		if(turn < 0) {
-			turn = players.size() - 1;
+			turn = players.size();
 		}
 	}
 	

@@ -3,6 +3,7 @@ package me.daniel.uno;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -16,7 +17,7 @@ public class Server implements Runnable {
 	private static List<Player> players = new ArrayList<>();
 	
 	public static void main(String[] args) {
-		if(args.length > 1) {
+		if(args.length >= 1) {
 			try {
 				port = Integer.parseInt(args[0].trim());
 			} catch(NumberFormatException e) {
@@ -61,16 +62,29 @@ public class Server implements Runnable {
 	}
 	
 	private void handle(Socket client) {
+		try {
+			client.setSoTimeout(10_000);
+		} catch (SocketException e) {}
 		byte[] nick_buf = new byte[16];
 		try {
+			client.getOutputStream().write("Please enter a nickname: ".getBytes());
 			client.getInputStream().read(nick_buf, 0, 16);
-		} catch (IOException e) {}
+		} catch (IOException e) {
+			try {
+				client.getOutputStream().write("\n\rYou have been disconnected for idling.\n\r".getBytes());
+				client.close();
+			} catch (IOException e1) {}
+			return;
+		}
 		String nick = new String(nick_buf).replaceAll("[^a-zA-Z0-9]", "").trim();
 		if(nick.length() > 16) {
 			nick = nick.substring(0, 15);
 		} else if(nick.isEmpty()) {
 			nick = "Player" + (int)(Math.random() * 100);
 		}
+		try {
+			client.setSoTimeout(0);
+		} catch(IOException e) {}
 		players.add(new Player(client, nick, players.size() + 1));
 		broadcast(String.format("Player %s has joined the game.\n\r", nick));
 	}
