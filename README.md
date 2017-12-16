@@ -4,14 +4,16 @@ Motivation: The only online Uno game I could find that was decent costs a lot of
 ### How to play  
 Host:  
 ```
-java me/daniel/uno/Server [port]
+java me.daniel.uno.Server [port]
+OR
+java -jar uno.jar [port]
 ```  
 The default port is `1312`.  
 You must port forward unless you are all playing on the same network.
 
 Player:  
 `telnet <ip> <port>` OR `nc <ip> <port>` or with PuTTY, using the `Raw` option.  
-Once connected, enter a nickname on the blank line. If no nickname is entered, a random  
+Once connected, enter a nickname. If no nickname is entered, a random  
 nickname will be created.
 
 During the game, you will be presented with four options on your turn: `PLAY`, `UNO`, `DRAW`, or `SKIP`.  
