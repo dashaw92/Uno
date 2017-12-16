@@ -1,5 +1,7 @@
 package me.daniel.uno.objects;
 
+import me.daniel.uno.util.Formatter;
+
 public class GameAction {
 	
 	Type type;
@@ -13,7 +15,23 @@ public class GameAction {
 	}
 	
 	public enum Type {
-		UNO, DRAW, PLAY, SKIP
+		UNO, DRAW, PLAY, SKIP, CHAT;
+		
+		String[] message = new String[1];
+		
+		public void setMsg(String msg) {
+			if(this.equals(CHAT)) {
+				message[0] = Formatter.format(msg);
+			}
+		}
+		
+		public String getMsg() {
+			if(this.equals(CHAT)) {
+				return message[0];
+			} else {
+				return "";
+			}
+		}
 	}
 	
 }

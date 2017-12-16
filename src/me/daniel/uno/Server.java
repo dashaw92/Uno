@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import me.daniel.uno.objects.Game;
+import me.daniel.uno.util.Formatter;
 
 public class Server implements Runnable {
 	
@@ -57,7 +58,7 @@ public class Server implements Runnable {
 	}
 	
 	public static void broadcast(String msg) {
-		System.out.println(msg);
+		System.out.println(Formatter.format(msg));
 		players.forEach(n -> n.sendString(msg));
 	}
 	
@@ -86,6 +87,6 @@ public class Server implements Runnable {
 			client.setSoTimeout(0);
 		} catch(IOException e) {}
 		players.add(new Player(client, nick, players.size() + 1));
-		broadcast(String.format("Player %s has joined the game.\n\r", nick));
+		broadcast(String.format("&yPlayer %s has joined the game.&w\n\r", nick));
 	}
 }

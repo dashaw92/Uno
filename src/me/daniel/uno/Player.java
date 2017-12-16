@@ -8,6 +8,7 @@ import java.util.Scanner;
 import me.daniel.uno.objects.Card;
 import me.daniel.uno.objects.Deck;
 import me.daniel.uno.objects.GameAction;
+import me.daniel.uno.util.Formatter;
 
 public class Player {
 	
@@ -21,6 +22,11 @@ public class Player {
 		this.nick = nick;
 		this.uid = uid;
 		this.hand = new Deck();
+		
+		sendString("&cWelcome to Uno, programmed by Daniel Shaw!\n\r");
+		sendString("&cTo play, you will select one of four options (&pPLAY&c, &pDRAW&c, &pUNO&c, or &pSKIP&c)\n\r");
+		sendString("&cTo play a card, just type &pplay <suit> <type>&c. For example: &pplay red two&c.\n\r");
+		sendString("&cYou can also send chat messages by using \"&p/&c\" as a prefix.\n\r&cHave fun!&w\n\r\n\r");
 	}
 	
 	public int getUid() {
@@ -39,21 +45,33 @@ public class Player {
 		return hand.getCards();
 	}
 	
-	public GameAction requestInput() {
-		
+	@SuppressWarnings("resource")
+	public GameAction requestInput(String last, boolean show_status) {
 		while(true) {
-			sendString("It's your move. Valid options: PLAY, UNO, DRAW, or SKIP\n\r");
-			sendString(String.format("Your hand: %s\n\r", hand));
+			if(show_status) {
+				sendString(String.format("\n\rLast move: %s\n\r", last == null? "&cNone" : last));
+				sendString("It's your move. Valid options: &cPLAY&w, &cUNO&w, &cDRAW&w, or &cSKIP&w\n\r");
+				sendString(String.format("&w&cYour hand: %s\n\r", hand));
+				show_status = false;
+			}
 			Scanner reader = null;
+			sendString("What will you do? &p");
 			try {
 				//Do not close this scanner, it will also close the client input stream.
 				reader = new Scanner(client.getInputStream());
 			} catch (IOException e) { continue; }
-			String input = reader.nextLine().replaceAll("[^a-zA-Z0-9 ]", "").toLowerCase().trim();
+			String input = reader.nextLine();
+			sendString("&w");
+			if(input.startsWith("/") && input.length() > 1) {
+				GameAction.Type chat = GameAction.Type.CHAT;
+				chat.setMsg(String.format("&y[CHAT] &p%s&w: &w%s\n\r", nick, input.substring(1)));
+				return new GameAction(chat);
+			}
+			input = input.replaceAll("[^a-zA-Z0-9 ]", "").toLowerCase().trim();
 			switch(input.split(" ")[0]) {
 				case "uno":
 					if(hand.getCardCount() > 1) {
-						sendString("You cannot declare Uno, you have more than one card still!\n\r");
+						sendString("&cYou cannot declare Uno, you have more than one card still!&w\n\r");
 						continue;
 					}
 					return new GameAction(GameAction.Type.UNO);
@@ -61,7 +79,7 @@ public class Player {
 					return new GameAction(GameAction.Type.DRAW);
 				case "play":
 					if(input.split(" ").length < 2) {
-						sendString("Correct usage: play suit type\n\rExample: play blue eight\n\r");
+						sendString("&cCorrect usage: &pplay suit type&w\n\r&cExample: &pplay blue eight&w\n\r");
 						continue;
 					}
 					try {
@@ -69,12 +87,12 @@ public class Player {
 						String type_args = input.substring(5 + suit.toString().length()).trim().replace(' ', '_');
 						Card.Type type = Card.Type.valueOf(type_args.toUpperCase());
 						if(!hand.containsCard(type, suit)) {
-							sendString("You do not have this card in your hand.\n\r");
+							sendString("&cYou do not have this card in your hand.&w\n\r");
 							continue;
 						}
 						return new GameAction(GameAction.Type.PLAY, hand.getFirstCard(type, suit));
 					} catch(Exception e) {
-						sendString("Invalid card suit or type.\n\r");
+						sendString("&cInvalid card suit or type.&w\n\r");
 						continue;
 					}
 				case "skip":
@@ -84,6 +102,7 @@ public class Player {
 	}
 	
 	public void sendString(String msg) {
+		msg = Formatter.format(msg);
 		try {
 			client.getOutputStream().write(msg.getBytes());
 		} catch (IOException e) {

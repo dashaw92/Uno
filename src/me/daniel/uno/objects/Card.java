@@ -1,5 +1,7 @@
 package me.daniel.uno.objects;
 
+import me.daniel.uno.util.Formatter;
+
 public class Card {
 	
 	Type type;
@@ -11,7 +13,7 @@ public class Card {
 	}
 	
 	public String toString() {
-		return String.format("%S %S, ", suit, type).replace('_', ' '); 
+		return Formatter.format(String.format("%s%S %S&w, ", suit.code, suit, type).replace('_', ' ')); 
 	}
 	
 	public enum Type {
@@ -38,6 +40,12 @@ public class Card {
 	}
 	
 	public enum Suit {
-		WILD, RED, GREEN, BLUE, YELLOW;
+		WILD("&rev"), RED("&r"), GREEN("&g"), BLUE("&b"), YELLOW("&y");
+		
+		String code;
+		
+		private Suit(String code) {
+			this.code = code;
+		}
 	}
 }
