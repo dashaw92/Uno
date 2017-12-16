@@ -11,7 +11,7 @@ public class Game {
 	private int turn = 0;
 	private int turncount = 0;
 	private int direction = 1;
-	private boolean action_done = false;
+	private int actions_done = 0; //counts the amount of turns since an action card was played
 	private List<Player> players;
 	private boolean playing = false;
 	
@@ -41,16 +41,15 @@ public class Game {
 	
 	public void turn() {
 		turncount += 1;
+		if(turn <= 0) turn = players.size() - 1;
 		Player current = players.get(turn % players.size());
 		Server.broadcast(String.format("\n\rTurn %d - It's %s's turn.\n\r", turncount, current.getNick()));
 		if(discard.getCardCount() > 0) { 
 			switch(getTopDiscarded().type) {
 				case SKIP:
-					if(action_done) {
-						action_done = false;
-					} else {
+					if(actions_done < 1) {
 						Server.broadcast(String.format("%s was skipped this turn.\n\r", current.getNick()));
-						action_done = true;
+						actions_done += 1;
 						turn += direction;
 						if(turn < 0) {
 							turn = players.size();
@@ -59,9 +58,9 @@ public class Game {
 					}
 					break;
 				case DRAW_FOUR:
-					if(!action_done) {
+					if(actions_done < 1) {
 						Server.broadcast(String.format("%s had to draw four.\n\r", current.getNick()));
-						action_done = true;
+						actions_done += 1;
 						for(int i = 0; i < 4; i++) {
 							Card c = drawing.draw();
 							current.sendString(String.format("You drew %s\n\r", c));
@@ -72,14 +71,12 @@ public class Game {
 							turn = players.size();
 						}
 						return;
-					} else {
-						action_done = false;
 					}
 					break;
 				case DRAW_TWO:
-					if(!action_done) {
+					if(actions_done < 1) {
 						Server.broadcast(String.format("%s had to draw two.\n\r", current.getNick()));
-						action_done = true;
+						actions_done += 1;
 						for(int i = 0; i < 2; i++) {
 							Card c = drawing.draw();
 							current.sendString(String.format("You drew %s\n\r", c));
@@ -90,8 +87,6 @@ public class Game {
 							turn = players.size();
 						}
 						return;
-					} else {
-						action_done = false;
 					}
 					break;
 				default:
@@ -108,6 +103,10 @@ public class Game {
 			switch(action.type) {
 				case SKIP:
 					boolean can_move = false;
+					if(!drew) {
+						current.sendString("You have not drawn a card yet, and cannot skip.\n\r");
+						break;
+					}
 					for(Card c: current.getCards()) {
 						if(isLegalMove(c)) {
 							current.sendString("You are able to play a card this round, and cannot skip.\n\r");
@@ -118,8 +117,8 @@ public class Game {
 					if(!can_move) {
 						Server.broadcast(String.format("%s has skipped their turn.\n\r", current.getNick()));
 						turn += direction;
-						if(turn < 0) {
-							turn = players.size();
+						if(turn <= 0) {
+							turn = players.size() - 1;
 						}
 						return;
 					}
@@ -149,6 +148,7 @@ public class Game {
 					}
 					discard.addCard(toPlay);
 					Server.broadcast(String.format("%s played %S %S.\n\r", current.getNick(), toPlay.suit, toPlay.type));
+					actions_done = 0;
 					switch(toPlay.type) {
 						case REVERSE:
 							direction = direction == 1? -1 : 1;
