@@ -69,12 +69,12 @@ public class Deck {
 		cards.clear();
 	}
 	
-	public void moveCardsFromDeck(Deck d) {
+	public void moveCardsFromDeck(Deck d, boolean shuffle) {
 		for(int i = 0; i < d.getCardCount(); i++) {
 			addCard(d.getCardAt(i));
 		}
 		d.empty();
-		Collections.shuffle(cards);
+		if(shuffle) Collections.shuffle(cards);
 	}
 	
 	public List<Card> getCards() {

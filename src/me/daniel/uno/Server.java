@@ -16,6 +16,7 @@ public class Server implements Runnable {
 	private static int port = 1312; //because 13 - 12 is Uno!
 	private static int slots = 4;
 	private static List<Player> players = new ArrayList<>();
+	private static List<Socket> spectators = new ArrayList<>();
 	
 	public static void main(String[] args) {
 		if(args.length >= 1) {
@@ -50,16 +51,43 @@ public class Server implements Runnable {
 		}
 		broadcast("Enough players have joined, let's play!\n\r");
 		Game game = new Game(players);
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try(ServerSocket server = new ServerSocket(port)) {
+					while(game.isPlaying()) {
+						Socket spect = server.accept();
+						spect.getOutputStream().write(Formatter.format("The server is full, so you will only be able to spectate.\r\n&u                         &w\r\n").getBytes());
+						spectators.add(spect);
+					}
+				} catch (IOException e) {}
+			}
+			
+		}).start();
 		while(game.isPlaying()) {
 			game.turn();
 		}
 		broadcast("Thanks for playing! Good bye!\n\r");
 		players.forEach(n -> n.disconnect());
+		spectators.forEach(n -> {
+			try {
+				n.close();
+			} catch(IOException e) {}
+		});
+		System.exit(0);
 	}
 	
 	public static void broadcast(String msg) {
-		System.out.println(Formatter.format(msg));
+		System.out.print(Formatter.format(msg));
 		players.forEach(n -> n.sendString(msg));
+		spectators.forEach(n -> {
+			try {
+				n.getOutputStream().write(Formatter.format(msg).getBytes());
+			} catch(IOException e) {
+				return;
+			}
+		});
 	}
 	
 	private void handle(Socket client) {

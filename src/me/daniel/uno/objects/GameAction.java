@@ -15,7 +15,7 @@ public class GameAction {
 	}
 	
 	public enum Type {
-		UNO, DRAW, PLAY, SKIP, CHAT;
+		UNO, DRAW, PLAY, SKIP, CHAT, DISCONNECT;
 		
 		String[] message = new String[1];
 		

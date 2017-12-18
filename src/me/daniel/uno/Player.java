@@ -2,7 +2,7 @@ package me.daniel.uno;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import me.daniel.uno.objects.Card;
@@ -26,7 +26,9 @@ public class Player {
 		sendString("&cWelcome to Uno, programmed by Daniel Shaw!\n\r");
 		sendString("&cTo play, you will select one of four options (&pPLAY&c, &pDRAW&c, &pUNO&c, or &pSKIP&c)\n\r");
 		sendString("&cTo play a card, just type &pplay <suit> <type>&c. For example: &pplay red two&c.\n\r");
-		sendString("&cYou can also send chat messages by using \"&p/&c\" as a prefix.\n\r&cHave fun!&w\n\r\n\r");
+		sendString("&cYou can also send chat messages by using \"&p/&c\" as a prefix.\n\r");
+		sendString("&RWARNING: Do &uNOT&w&R Ctrl+C- You will lose the game! You have been warned...&w\n\r");
+		sendString("&cHave fun!&w\n\r\r\n");
 	}
 	
 	public int getUid() {
@@ -41,26 +43,33 @@ public class Player {
 		hand.addCard(c);
 	}
 	
-	public List<Card> getCards() {
-		return hand.getCards();
+	public Deck getCards() {
+		return hand;
 	}
 	
 	@SuppressWarnings("resource")
 	public GameAction requestInput(String last, boolean show_status) {
 		while(true) {
 			if(show_status) {
-				sendString(String.format("\n\rLast move: %s\n\r", last == null? "&cNone" : last));
+				sendString(String.format("\n\rTop of discard pile: %s\n\r", last == null? "&cNone" : last));
 				sendString("It's your move. Valid options: &cPLAY&w, &cUNO&w, &cDRAW&w, or &cSKIP&w\n\r");
 				sendString(String.format("&w&cYour hand: %s\n\r", hand));
 				show_status = false;
 			}
 			Scanner reader = null;
-			sendString("What will you do? &p");
+			sendString("What will you do? &c");
 			try {
 				//Do not close this scanner, it will also close the client input stream.
 				reader = new Scanner(client.getInputStream());
 			} catch (IOException e) { continue; }
-			String input = reader.nextLine();
+			String input = " ";
+			try {
+				input = reader.nextLine();
+			} catch(NoSuchElementException e) {
+				sendString("&RTold you you'd lose...&w\r\n");
+				disconnect();
+				return new GameAction(GameAction.Type.DISCONNECT);
+			}
 			sendString("&w");
 			if(input.startsWith("/") && input.length() > 1) {
 				GameAction.Type chat = GameAction.Type.CHAT;
@@ -95,6 +104,10 @@ public class Player {
 						sendString("&cInvalid card suit or type.&w\n\r");
 						continue;
 					}
+				case "clear":
+					sendString(Formatter.clear());
+					show_status = true;
+					continue;
 				case "skip":
 					return new GameAction(GameAction.Type.SKIP);
 			}

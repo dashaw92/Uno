@@ -43,7 +43,7 @@ public class Game {
 		turncount += 1;
 		if(turn <= 0) turn = players.size();
 		Player current = players.get(turn % players.size());
-		Server.broadcast("&u                                                        &w\r\n");
+		Server.broadcast("&w&u                                                        &w\r\n");
 		Server.broadcast(String.format("\n\r&cTurn %d - It's &p%s's&c turn.&w\n\r", turncount, current.getNick()));
 		if(discard.getCardCount() > 0 && !action) { 
 			switch(getTopDiscarded().type) {
@@ -54,9 +54,14 @@ public class Game {
 					return;
 				case DRAW_FOUR:
 					Server.broadcast(String.format("%s had to draw four.\n\r", current.getNick()));
+					reclaimDiscard();
 					action = true;
 					for(int i = 0; i < 4; i++) {
 						Card c = drawing.draw();
+						if(c == null && discard.getCardCount() <= 1 && drawing.getCardCount() == 0) {
+							current.sendString("&cYou cannot draw anymore cards because there are none left to draw!&w\n\r");
+							break;
+						}
 						current.sendString(String.format("You drew %s\n\r", c));
 						current.giveCard(c);
 					}
@@ -64,9 +69,14 @@ public class Game {
 					return;
 				case DRAW_TWO:
 					Server.broadcast(String.format("%s had to draw two.\n\r", current.getNick()));
+					reclaimDiscard();
 					action = true;
 					for(int i = 0; i < 2; i++) {
 						Card c = drawing.draw();
+						if(c == null && discard.getCardCount() <= 1 && drawing.getCardCount() == 0) {
+							current.sendString("&cYou cannot draw anymore cards because there are none left to draw!&w\n\r");
+							break;
+						}
 						current.sendString(String.format("You drew %s\n\r", c));
 						current.giveCard(c);
 					}
@@ -91,14 +101,14 @@ public class Game {
 					continue;
 				case SKIP:
 					boolean can_move = false;
-					if(!drew) {
-						current.sendString("You have not drawn a card yet, and cannot skip.\n\r");
+					if(!drew && !(discard.getCardCount() <= 1 && drawing.getCardCount() == 0)) {
+						current.sendString("&cYou have not drawn a card yet, and cannot skip.&w\n\r");
 						show_info = false;
 						break;
 					}
-					for(Card c: current.getCards()) {
+					for(Card c: current.getCards().getCards()) {
 						if(isLegalMove(c)) {
-							current.sendString("You are able to play a card this round, and cannot skip.\n\r");
+							current.sendString("&cYou are able to play a card this round, and cannot skip.&w\n\r");
 							show_info = false;
 							can_move = true;
 							break;
@@ -117,15 +127,15 @@ public class Game {
 				case DRAW:
 					show_info = false;
 					if(drew) {
-						current.sendString("You already drew a card this turn!\n\r");
+						current.sendString("&cYou already drew a card this turn!&w\n\r");
 						continue;
 					}
-					if(drawing.getCardCount() == 0) {
-						Server.broadcast("&cThe discard pile is being shuffled.&w\n\r");
-						drawing.moveCardsFromDeck(discard);
-						discard.addCard(drawing.draw());
-					}
+					reclaimDiscard();
 					Card next = drawing.draw();
+					if(next == null && discard.getCardCount() <= 1 && drawing.getCardCount() == 0) {
+						current.sendString("&cYou cannot draw anymore cards because there are none left to draw!&w\n\r");
+						break;
+					}
 					current.sendString(String.format("You drew %s\n\r", next));
 					current.giveCard(next);
 					Server.broadcast(String.format("%s drew a card.\n\r", current.getNick()));
@@ -152,6 +162,19 @@ public class Game {
 					}
 					in_turn = false;
 					break;
+				case DISCONNECT:
+					Server.broadcast(String.format("&y%s has forfeited the game.&w\r\n", current.getNick()));
+					players.remove(current);
+					if(players.size() < 3) {
+						Server.broadcast(String.format("%s won!\r\n", players.get(0).getNick()));
+						playing = false;
+						return;
+					}
+					Server.broadcast(String.format("&y%s's cards have been moved to the discard pile.&w\r\n", current.getNick()));
+					Card top = discard.getCardAt(discard.getCardCount() - 1);
+					discard.moveCardsFromDeck(current.getCards(), false);
+					discard.addCard(top);
+					return;
 			}
 		}
 		
@@ -170,6 +193,15 @@ public class Game {
 		turn += direction;
 		if(turn < 0) {
 			turn = players.size();
+		}
+	}
+	
+	private void reclaimDiscard() {
+		if(drawing.getCardCount() == 0) {
+			Server.broadcast("&cThe discard pile is being shuffled.&w\n\r");
+			Card top = discard.getCardAt(discard.getCardCount() - 1);
+			drawing.moveCardsFromDeck(discard, true);
+			discard.addCard(top);
 		}
 	}
 }
