@@ -9,7 +9,7 @@ OR
 java -jar uno.jar [port]
 ```  
 The default port is `1312`.  
-You must port forward unless you are all playing on the same network.
+You must port forward unless you are all playing on the same network. (See [here](https://portforward.com/) for how)
 
 Player:  
 `telnet <ip> <port>` OR `nc <ip> <port>` or with PuTTY, using the `Raw` option.  
